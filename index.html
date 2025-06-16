@@ -45,7 +45,7 @@
             <div class="w-2/3 flex flex-col items-center justify-between p-10">
                 <!-- Timer display for current recording -->
                 <div class="flex-grow flex items-center justify-center">
-                    <div id="timer" class="text-8xl font-mono font-bold text-gray-800">00:00</div>
+                    <div id="timer" class="text-8xl font-mono font-bold text-gray-800">Not Recording</div>
                 </div>
                 <!-- Record/Stop button -->
                 <div class="flex-shrink-0">
@@ -172,7 +172,7 @@
                 mediaRecorder.stop(); // Stop the recording.
             }
             isRecording = false;
-            recordButton.textContent = 'Record';
+            recordButton.textContent = '🎤';
             recordButton.classList.remove('recording');
             clearInterval(timerInterval); // Stop the timer.
             timerDisplay.textContent = '00:00'; // Reset timer display.
