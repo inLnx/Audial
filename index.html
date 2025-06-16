@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder</title>
+    <!-- Tailwind CSS for utility-first styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Apply Inter font family to the body */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Transition effect for the record button's background color */
+        .record-button {
+            transition: all 0.2s ease-in-out;
+        }
+        /* Style for the record button when it is in recording state */
+        .record-button.recording {
+            background-color: #eb1414; /* Tailwind's red-500 */
+        }
+        /* Hover effect for the record button when recording */
+        .record-button.recording:hover {
+            background-color: rgb(156, 53, 53); /* Tailwind's red-600 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen">
+
+    <!-- Main Application Container (always visible now as no auth is needed) -->
+    <div id="app-container" class="w-full max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl overflow-hidden" style="height: 600px;">
+        <div class="flex h-full">
+            <!-- Left Column: Displays current session recordings -->
+            <div class="w-1/3 bg-gray-50 border-r border-gray-200 p-6 flex flex-col">
+                <h2 class="text-2xl font-bold mb-6 text-gray-700">Current session recordings</h2>
+                <!-- Container where recording cards will be dynamically inserted -->
+                <div id="recordingsList" class="space-y-4 overflow-y-auto flex-grow">
+                    <!-- Recordings will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <!-- Right Column: Audio Recorder Controls -->
+            <div class="w-2/3 flex flex-col items-center justify-between p-10">
+                <!-- Timer display for current recording -->
+                <div class="flex-grow flex items-center justify-center">
+                    <div id="timer" class="text-8xl font-mono font-bold text-gray-800">00:00</div>
+                </div>
+                <!-- Record/Stop button -->
+                <div class="flex-shrink-0">
+                    <button id="recordButton" class="record-button bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-12 rounded-full shadow-lg focus:outline-none text-2xl">
+                        Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for displaying error messages (retained for user feedback) -->
+    <div id="errorModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm mx-auto">
+            <h3 class="text-lg font-bold mb-4">Error</h3>
+            <p id="errorMessage"></p>
+            <button onclick="document.getElementById('errorModal').classList.add('hidden')" class="mt-4 bg-red-500 text-white font-bold py-2 px-4 rounded w-full">Close</button>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // These variables manage the recording process, timer, and local storage of recordings.
+        let mediaRecorder; // MediaRecorder instance for audio recording
+        let audioChunks = []; // Array to store audio data chunks
+        let timerInterval; // Interval ID for the recording timer
+        let seconds = 0; // Current recording duration in seconds
+        let isRecording = false; // Flag to indicate if recording is active
+        let localRecordings = []; // Array to store recordings for the current session
+
+        // --- DOM Element References ---
+        // Caching DOM elements for efficient access.
+        const recordButton = document.getElementById('recordButton');
+        const timerDisplay = document.getElementById('timer');
+        const recordingsList = document.getElementById('recordingsList');
+        const errorModal = document.getElementById('errorModal');
+        const errorMessage = document.getElementById('errorMessage');
+
+   
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${minutes}:${seconds}`;
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorModal.classList.remove('hidden'); // Show the modal
+        }
+        
+      
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result); // Resolve with the result when loading is complete
+                reader.onerror = reject; // Reject if an error occurs during reading
+                reader.readAsDataURL(blob); // Read the Blob as a Data URL
+            });
+        }
+
+    
+        function downloadRecording(dataUrl, filename) {
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = filename;
+            document.body.appendChild(a); // Append to body is necessary for Firefox
+            a.click(); // Programmatically click the link to trigger download
+            document.body.removeChild(a); // Clean up the temporary link
+        }
+
+  
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+      
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                
+                audioChunks = [];
+                seconds = 0;
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data); // Add the available data chunk to the array.
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    try {
+                        const audioDataUrl = await blobToBase64(audioBlob);
+                        saveRecordingLocally(audioDataUrl);
+                    } catch (error) {
+                        console.error("Error converting blob or saving:", error);
+                        showError("Could not process the recording. Please try again.");
+                    }
+                    stream.getTracks().forEach(track => track.stop());
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordButton.textContent = 'Stop';
+                recordButton.classList.add('recording');
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    timerDisplay.textContent = formatTime(seconds);
+                }, 1000);
+
+            } catch (err) {
+                console.error("Error accessing microphone:", err);
+                showError("Microphone access was denied. Please allow microphone access in your browser settings to use the recorder.");
+                isRecording = false; // Ensure state is correctly reset if mic access fails.
+            }
+        }
+
+     
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop(); // Stop the recording.
+            }
+            isRecording = false;
+            recordButton.textContent = 'Record';
+            recordButton.classList.remove('recording');
+            clearInterval(timerInterval); // Stop the timer.
+            timerDisplay.textContent = '00:00'; // Reset timer display.
+        }
+
+        function saveRecordingLocally(audioDataUrl) {
+            const recordingId = Date.now().toString(); // Simple unique ID for the session
+            const newRecording = {
+                id: recordingId,
+                name: `Recording ${new Date().toLocaleTimeString()}`, // Dynamic name
+                timestamp: new Date().toISOString(), // ISO string for easy sorting
+                audioDataUrl: audioDataUrl
+            };
+            localRecordings.push(newRecording);
+            localRecordings.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            renderRecordings(localRecordings); // Re-render the list
+        }
+        
+ 
+        function deleteRecordingLocally(id) {
+            localRecordings = localRecordings.filter(rec => rec.id !== id);
+            renderRecordings(localRecordings); // Re-render the list
+        }
+
+     
+        function renderRecordings(recordings) {
+            recordingsList.innerHTML = ''; 
+            if (recordings.length === 0) {
+                recordingsList.innerHTML = `<p class="text-gray-500 text-center">No recordings yet for this session.</p>`;
+                return;
+            }
+            recordings.forEach(rec => {
+                if (!rec.audioDataUrl) return;
+
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm';
+
+                const nameEl = document.createElement('p');
+                nameEl.className = 'font-semibold text-gray-700 truncate';
+                nameEl.textContent = rec.name;
+
+                const dateEl = document.createElement('p');
+                dateEl.className = 'text-sm text-gray-500';
+                dateEl.textContent = new Date(rec.timestamp).toLocaleDateString() + ' ' + new Date(rec.timestamp).toLocaleTimeString();
+                
+                const audioEl = document.createElement('audio');
+                audioEl.controls = true; 
+                audioEl.src = rec.audioDataUrl; 
+                audioEl.className = 'w-full mt-3';
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'flex justify-between items-center mt-2';
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download inline-block mr-1" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                    </svg>
+                    Download
+                `;
+                downloadBtn.className = 'text-blue-600 hover:text-blue-800 text-sm font-semibold py-1 px-2 rounded-md';
+                downloadBtn.onclick = () => {
+                    const filename = `recording-${new Date().toISOString().replace(/:/g, '-')}.webm`;
+                    downloadRecording(rec.audioDataUrl, filename);
+                };
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash inline-block" viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                    </svg>
+                `;
+                deleteBtn.className = 'text-red-500 hover:text-red-700 py-1 px-2 rounded-md';
+                deleteBtn.onclick = () => deleteRecordingLocally(rec.id);
+                
+                actionsDiv.appendChild(downloadBtn);
+                actionsDiv.appendChild(deleteBtn);
+
+                card.appendChild(nameEl);
+                card.appendChild(dateEl);
+                card.appendChild(audioEl);
+                card.appendChild(actionsDiv);
+
+                recordingsList.appendChild(card); 
+            });
+        }
+
+
+
+        function initializeApp() {
+            renderRecordings(localRecordings);
+        }
+        recordButton.addEventListener('click', toggleRecording);
+      window.onload = initializeApp;
+
+    </script>
+</body>
+</html>
