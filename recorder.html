@@ -3,20 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audial - Audio Recorder</title>
+    <title>Audio Recorder</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
         .record-button {
             transition: all 0.2s ease-in-out;
         }
         .record-button.recording {
-            background-color: #eb1414; 
+            background-color: #ef4444;
         }
         .record-button.recording:hover {
-            background-color: rgb(156, 53, 53); 
+            background-color: #dc2626;
+        }
+        #transcriptionDisplay {
+            min-height: 50px;
+            padding: 10px;
+            background-color: #f3f4f6;
+            border-radius: 8px;
+            font-size: 1.125rem;
+            color: #4b5563;
+            text-align: center;
+            overflow-y: auto;
+            max-height: 150px;
+        }
+        .summary-loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -28,16 +55,22 @@
                 <h2 class="text-2xl font-bold mb-6 text-gray-700">Current session recordings</h2>
                 <div id="recordingsList" class="space-y-4 overflow-y-auto flex-grow">
                 </div>
+            </div>
+
+            <div class="w-2/3 flex flex-col items-center justify-between p-10">
+                <div class="flex items-center space-x-2 mb-6">
+                    <input type="checkbox" id="transcriptionToggle" class="form-checkbox h-5 w-5 text-blue-600 rounded-md">
+                    <label for="transcriptionToggle" class="text-lg text-gray-700 select-none">Enable Live Transcription</label>
                 </div>
 
-            <!-- Right Column: Audio Recorder Controls -->
-            <div class="w-2/3 flex flex-col items-center justify-between p-10">
-                <!-- Timer display for current recording -->
-                <div class="flex-grow flex items-center justify-center">
-                    <div id="timer" class="text-8xl font-mono font-bold text-gray-800">Not Recording</div>
+                <div class="flex-grow flex items-center justify-center flex-col">
+                    <div id="timer" class="text-8xl font-mono font-bold text-gray-800 mb-4">00:00</div>
+                    <div id="transcriptionDisplay" class="w-full text-center text-lg text-gray-700 border border-gray-300 rounded-lg p-3 overflow-y-auto max-h-40">
+                        <p class="text-gray-500">Transcription will appear here...</p>
+                    </div>
                 </div>
-                <!-- Record/Stop button -->
-                <div class="flex-shrink-0">
+                
+                <div class="flex-shrink-0 mt-8">
                     <button id="recordButton" class="record-button bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-4 px-12 rounded-full shadow-lg focus:outline-none text-2xl">
                         Record
                     </button>
@@ -54,27 +87,42 @@
         </div>
     </div>
 
-<script>
-    </script>
-    <script type="module">
-        // These variables manage the recording process, timer, and local storage of recordings.
-        let mediaRecorder; // MediaRecorder instance for audio recording
-       
-               let audioChunks = []; 
-                                         let timerInterval; 
-        let seconds = 0;
-        let isRecording = false; 
-        let localRecordings = []; 
+    <div id="summaryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-xl max-w-lg w-full mx-auto">
+            <h3 class="text-lg font-bold mb-4 flex items-center">
+                Summary of Transcription
+                <span id="summaryLoader" class="summary-loader hidden"></span>
+            </h3>
+            <p id="summaryContent" class="text-gray-700 max-h-80 overflow-y-auto"></p>
+            <button onclick="document.getElementById('summaryModal').classList.add('hidden'); document.getElementById('summaryContent').textContent = '';" class="mt-4 bg-blue-500 text-white font-bold py-2 px-4 rounded w-full">Close</button>
+        </div>
+    </div>
 
-        // --- DOM Element References ---
-        // Caching DOM elements for efficient access.
+
+    <script type="module">
+        let mediaRecorder;
+        let audioChunks = [];
+        let timerInterval;
+        let seconds = 0;
+        let isRecording = false;
+        let localRecordings = [];
+        
+        let recognition;
+        let currentTranscription = '';
+        let isTranscriptionEnabled = false;
+
         const recordButton = document.getElementById('recordButton');
         const timerDisplay = document.getElementById('timer');
         const recordingsList = document.getElementById('recordingsList');
         const errorModal = document.getElementById('errorModal');
         const errorMessage = document.getElementById('errorMessage');
+        const transcriptionToggle = document.getElementById('transcriptionToggle');
+        const transcriptionDisplay = document.getElementById('transcriptionDisplay');
+        const summaryModal = document.getElementById('summaryModal');
+        const summaryContent = document.getElementById('summaryContent');
+        const summaryLoader = document.getElementById('summaryLoader');
 
-   
+
         function formatTime(totalSeconds) {
             const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
             const seconds = (totalSeconds % 60).toString().padStart(2, '0');
@@ -83,30 +131,27 @@
 
         function showError(message) {
             errorMessage.textContent = message;
-            errorModal.classList.remove('hidden'); // Show the modal
+            errorModal.classList.remove('hidden');
         }
         
-      
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result); 
-                reader.onerror = reject; 
-                reader.readAsDataURL(blob); 
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
             });
         }
 
-    
         function downloadRecording(dataUrl, filename) {
             const a = document.createElement('a');
             a.href = dataUrl;
             a.download = filename;
-            document.body.appendChild(a); // Append to body is necessary for Firefox
-            a.click(); // Programmatically click the link to trigger download
-            document.body.removeChild(a); // Clean up the temporary link
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
-  
         async function toggleRecording() {
             if (isRecording) {
                 stopRecording();
@@ -115,7 +160,6 @@
             }
         }
 
-      
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -123,21 +167,27 @@
                 
                 audioChunks = [];
                 seconds = 0;
-                
+                currentTranscription = '';
+                transcriptionDisplay.textContent = 'Transcription will appear here...';
+
                 mediaRecorder.ondataavailable = event => {
-                    audioChunks.push(event.data); // Add the available data chunk to the array.
+                    audioChunks.push(event.data);
                 };
 
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     try {
                         const audioDataUrl = await blobToBase64(audioBlob);
-                        saveRecordingLocally(audioDataUrl);
+                        saveRecordingLocally(audioDataUrl, currentTranscription);
                     } catch (error) {
-                        console.error("Error converting blob or saving:", error);
+                        console.error("Error processing recording:", error);
                         showError("Could not process the recording. Please try again.");
                     }
                     stream.getTracks().forEach(track => track.stop());
+
+                    if (recognition && isTranscriptionEnabled) {
+                        recognition.stop();
+                    }
                 };
 
                 mediaRecorder.start();
@@ -149,49 +199,172 @@
                     timerDisplay.textContent = formatTime(seconds);
                 }, 1000);
 
+                if (isTranscriptionEnabled) {
+                    startTranscription(stream);
+                }
+
             } catch (err) {
                 console.error("Error accessing microphone:", err);
-                showError("Please enable Microphone permission in your browser.");
-                isRecording = false; // Ensure state is correctly reset if mic access fails.
+                showError("Microphone access was denied. Please allow microphone access in your browser settings to use the recorder (and transcription).");
+                isRecording = false;
+                if (recognition) {
+                    recognition.stop();
+                }
             }
         }
 
-     
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                mediaRecorder.stop(); // Stop the recording.
+                mediaRecorder.stop();
             }
             isRecording = false;
-            recordButton.textContent = '🎤';
+            recordButton.textContent = 'Record';
             recordButton.classList.remove('recording');
-            clearInterval(timerInterval); // Stop the timer.
-            timerDisplay.textContent = '00:00'; // Reset timer display.
+            clearInterval(timerInterval);
+            timerDisplay.textContent = '00:00';
+            if (recognition && isTranscriptionEnabled) {
+                recognition.stop();
+            }
         }
 
-        function saveRecordingLocally(audioDataUrl) {
-            const recordingId = Date.now().toString(); // Simple unique ID for the session
+        function startTranscription(stream) {
+            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!window.SpeechRecognition) {
+                showError("Your browser does not support transcription.");
+                isTranscriptionEnabled = false;
+                transcriptionToggle.checked = false;
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.interimResults = true;
+            recognition.continuous = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = event => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                currentTranscription = finalTranscript + interimTranscript;
+                transcriptionDisplay.textContent = currentTranscription || 'Transcription will appear here...';
+            };
+
+            recognition.onerror = event => {
+                console.error('Speech Recognition Error:', event.error);
+                let message = `Transcription error: ${event.error}.`;
+                if (event.error === 'not-allowed') {
+                    message += " Microphone not detected";
+                } else if (event.error === 'no-speech') {
+                    message += " No speech detected.";
+                } else if (event.error === 'network') {
+                    message += "Transcription requires an internet connection.";
+                }
+                showError(message);
+                if (recognition) {
+                    recognition.stop();
+                }
+                if (isRecording) {
+                    stopRecording();
+                }
+            };
+            
+            recognition.onend = () => {
+                if (isRecording && isTranscriptionEnabled) {
+                    console.log("Speech recognition ended, restarting...");
+                    try {
+                         recognition.start();
+                    } catch (e) {
+                        console.warn("Could not restart speech recognition:", e);
+                        showError("Failed to restart transcription service.");
+                    }
+                } else {
+                    console.log("Speech recognition stopped normally.");
+                }
+            };
+
+            recognition.start();
+            transcriptionDisplay.textContent = 'Listening...';
+        }
+// AI function
+// Please delete API key and replace with own key if cloning
+// Google Gemini API keys are free for up to 50 times per day
+// Thanks
+        async function summarizeTranscription(textToSummarize) {
+            summaryModal.classList.remove('hidden');
+            summaryContent.textContent = 'Generating summary...';
+            summaryLoader.classList.remove('hidden');
+
+            if (!textToSummarize || textToSummarize.trim() === '') {
+                summaryContent.textContent = "No transcription found to summarize.";
+                summaryLoader.classList.add('hidden');
+                return;
+            }
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: `Please summarize the following audio transcription concisely:\n\n${textToSummarize}` }] });
+                
+                const payload = { contents: chatHistory };
+                const apiKey = "AIzaSyC0iXmXyUU_rMXFLCF8T63_mUDIgzCl8Io";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const summary = result.candidates[0].content.parts[0].text;
+                    summaryContent.textContent = summary;
+                } else {
+                    summaryContent.textContent = "Could not generate summary. No content returned from API.";
+                    console.error("Unexpected API response structure:", result);
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API:", error);
+                summaryContent.textContent = `Error generating summary: ${error.message}. Please try again.`;
+            } finally {
+                summaryLoader.classList.add('hidden');
+            }
+        }
+
+        function saveRecordingLocally(audioDataUrl, transcriptionText) {
+            const recordingId = Date.now().toString();
             const newRecording = {
                 id: recordingId,
-                name: `Recording ${new Date().toLocaleTimeString()}`, // Dynamic name
-                timestamp: new Date().toISOString(), // ISO string for easy sorting
-                audioDataUrl: audioDataUrl
+                name: `Recording ${new Date().toLocaleTimeString()}`,
+                timestamp: new Date().toISOString(),
+                audioDataUrl: audioDataUrl,
+                transcription: transcriptionText
             };
             localRecordings.push(newRecording);
             localRecordings.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            renderRecordings(localRecordings); // Re-render the list
+            renderRecordings(localRecordings);
         }
         
- 
         function deleteRecordingLocally(id) {
             localRecordings = localRecordings.filter(rec => rec.id !== id);
-            renderRecordings(localRecordings); // Re-render the list
+            renderRecordings(localRecordings);
         }
 
-     
         function renderRecordings(recordings) {
-            recordingsList.innerHTML = ''; 
+            recordingsList.innerHTML = '';
             if (recordings.length === 0) {
-                recordingsList.innerHTML = `<p class="text-gray-500 text-center">No recordings for this session.</p>`;
+                recordingsList.innerHTML = `<p class="text-gray-500 text-center">No recordings yet for this session.</p>`;
                 return;
             }
             recordings.forEach(rec => {
@@ -205,16 +378,36 @@
                 nameEl.textContent = rec.name;
 
                 const dateEl = document.createElement('p');
-                dateEl.className = 'text-sm text-gray-500';
+                dateEl.className = 'text-sm text-gray-500 mb-2';
                 dateEl.textContent = new Date(rec.timestamp).toLocaleDateString() + ' ' + new Date(rec.timestamp).toLocaleTimeString();
                 
                 const audioEl = document.createElement('audio');
-                audioEl.controls = true; 
-                audioEl.src = rec.audioDataUrl; 
-                audioEl.className = 'w-full mt-3';
+                audioEl.controls = true;
+                audioEl.src = rec.audioDataUrl;
+                audioEl.className = 'w-full mt-3 mb-2';
+
+                if (rec.transcription && rec.transcription.trim() !== '') {
+                    const transcriptionEl = document.createElement('p');
+                    transcriptionEl.className = 'text-sm text-gray-600 italic border-t border-gray-200 pt-2 mt-2';
+                    transcriptionEl.textContent = `"${rec.transcription.trim()}"`;
+                    card.appendChild(transcriptionEl);
+                }
 
                 const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'flex justify-between items-center mt-2';
+                actionsDiv.className = 'flex flex-col space-y-2 mt-2';
+
+                if (rec.transcription && rec.transcription.trim() !== '') {
+                    const summarizeBtn = document.createElement('button');
+                    summarizeBtn.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-robot inline-block mr-1" viewBox="0 0 16 16">
+                            <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M.5 12V3a.5.5 0 0 1 .5-.5h13a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-13a.5.5 0 0 1-.5-.5M3 8.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm5-1.5a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm2.5-.5h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm-5.5 4a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm5-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5zm2.5 0h-1a.5.5 0 0 0-.5.5v1a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-1a.5.5 0 0 0-.5-.5z"/>
+                        </svg>
+                        Summarize Transcription ✨
+                    `;
+                    summarizeBtn.className = 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded-md shadow-sm text-sm';
+                    summarizeBtn.onclick = () => summarizeTranscription(rec.transcription);
+                    actionsDiv.appendChild(summarizeBtn);
+                }
 
                 const downloadBtn = document.createElement('button');
                 downloadBtn.innerHTML = `
@@ -248,17 +441,27 @@
                 card.appendChild(audioEl);
                 card.appendChild(actionsDiv);
 
-                recordingsList.appendChild(card); 
+                recordingsList.appendChild(card);
             });
         }
 
-
-
         function initializeApp() {
             renderRecordings(localRecordings);
+
+            transcriptionToggle.addEventListener('change', () => {
+                isTranscriptionEnabled = transcriptionToggle.checked;
+                if (isTranscriptionEnabled && !isRecording) {
+                    transcriptionDisplay.textContent = 'Listening will begin when recording starts...';
+                } else if (!isTranscriptionEnabled && !isRecording) {
+                     transcriptionDisplay.textContent = 'Transcription will appear here...';
+                }
+            });
+            isTranscriptionEnabled = transcriptionToggle.checked;
         }
+
         recordButton.addEventListener('click', toggleRecording);
-      window.onload = initializeApp;
+        
+        window.onload = initializeApp;
 
     </script>
 </body>
