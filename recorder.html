@@ -59,11 +59,12 @@
     <script type="module">
         // These variables manage the recording process, timer, and local storage of recordings.
         let mediaRecorder; // MediaRecorder instance for audio recording
-        let audioChunks = []; // Array to store audio data chunks
-        let timerInterval; // Interval ID for the recording timer
-        let seconds = 0; // Current recording duration in seconds
-        let isRecording = false; // Flag to indicate if recording is active
-        let localRecordings = []; // Array to store recordings for the current session
+       
+               let audioChunks = []; 
+                                         let timerInterval; 
+        let seconds = 0;
+        let isRecording = false; 
+        let localRecordings = []; 
 
         // --- DOM Element References ---
         // Caching DOM elements for efficient access.
@@ -89,9 +90,9 @@
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result); // Resolve with the result when loading is complete
-                reader.onerror = reject; // Reject if an error occurs during reading
-                reader.readAsDataURL(blob); // Read the Blob as a Data URL
+                reader.onloadend = () => resolve(reader.result); 
+                reader.onerror = reject; 
+                reader.readAsDataURL(blob); 
             });
         }
 
