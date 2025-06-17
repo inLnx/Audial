@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Recorder</title>
+    <title>Audial - Audio recorder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
@@ -283,8 +283,8 @@
                     try {
                          recognition.start();
                     } catch (e) {
-                        console.warn("Could not restart speech recognition:", e);
-                        showError("Failed to restart transcription service.");
+                        console.warn("Could not start speech recognition:", e);
+                        showError("Could not start transcription.");
                     }
                 } else {
                     console.log("Speech recognition stopped normally.");
@@ -304,7 +304,7 @@
             summaryLoader.classList.remove('hidden');
 
             if (!textToSummarize || textToSummarize.trim() === '') {
-                summaryContent.textContent = "No transcription found to summarize.";
+                summaryContent.textContent = "No transcription to summarize.";
                 summaryLoader.classList.add('hidden');
                 return;
             }
