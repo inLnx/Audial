@@ -233,7 +233,7 @@
                 if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
                     displayError("We need microphone access to record! Please allow it in your browser settings.");
                 } else if (err.name === "NotFoundError") {
-                    displayError("No microphone found. Please connect one and try again.");
+                    displayError("No microphone found.");
                 } else {
                     displayError("An unexpected error occurred accessing your microphone. (" + err.message + ")");
                 }
