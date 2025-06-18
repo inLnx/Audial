@@ -44,26 +44,25 @@
             border: 1px solid #e5e7eb; /* Subtle border for definition */
         }
         
-        /* Loader animation for AI summary */
+        
         .summary-loader {
-            border: 4px solid #f3f3f3; /* Light gray base */
-            border-top: 4px solid #6b21a8; /* A deep purple, feels a bit more custom than just '330446' */
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #6b21a8;
             border-radius: 50%;
-            width: 28px; /* Slightly larger loader */
+            width: 28px; 
             height: 28px;
-            animation: spin 1s linear infinite;
+            animation: spin 2s linear infinite;
             display: inline-block;
             vertical-align: middle;
-            margin-left: 10px; /* More space */
+            margin-left: 10px; 
         }
 
-        /* Keyframe animation for the spinner */
-        @keyframes spin {
+         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
-        /* Adding a bit of custom flair for the app container shadow */
+        
         #app-container {
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* More pronounced shadow */
         }
