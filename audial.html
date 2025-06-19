@@ -350,13 +350,13 @@
                         displayError("Couldn't restart live transcription. Please try recording again.");
                     }
                 } else {
-                    console.log("Speech recognition gracefully stopped.");
-                    transcriptionDisplay.textContent = currentLiveTranscription || 'Transcription ended.';
+                    console.log(" Transcription stopped.");
+                    transcriptionDisplay.textContent = currentLiveTranscription | 'Transcription ended.';
                 }
             };
 
             speechRecognition.start(); 
-            transcriptionDisplay.textContent = 'Listening for your voice...';
+            transcriptionDisplay.textContent = 'Listening ';
         }
 
         
