@@ -385,7 +385,6 @@
                 transcriptionDisplay.textContent = currentLiveTranscription || 'Still listening...'; // Update display
             };
 
-            // Handle speech recognition errors
             speechRecognition.onerror = event => {
                 console.error('Speech Recognition Error:', event.error);
                 let message = `Transcription error: "${event.error}".`;
@@ -398,7 +397,6 @@
                 }
                 displayError(message);
 
-                // Stop recognition and recording on certain errors
                 if (speechRecognition) {
                     speechRecognition.stop();
                 }
@@ -407,13 +405,12 @@
                 }
             };
 
-            // Handle speech recognition end event (e.g., due to inactivity or explicit stop)
             speechRecognition.onend = () => {
                 if (isRecording && isTranscriptionEnabled) {
                     console.log("Speech recognition stopped, attempting to restart...");
                     try {
-                        speechRecognition.start(); // Attempt to restart for continuous transcription during recording
-                    } catch (e) {
+                        speechRecognition.start(); 
+                        } catch (e) {
                         console.warn("Failed to restart speech recognition:", e);
                         displayError("Couldn't restart live transcription. Please try recording again.");
                     }
@@ -423,15 +420,11 @@
                 }
             };
 
-            speechRecognition.start(); // Start speech recognition
+            speechRecognition.start(); 
             transcriptionDisplay.textContent = 'Listening for your voice...';
         }
 
-        /**
-         * Fetches a summary of the provided text using the Gemini API.
-         * Displays the summary in a modal.
-         * @param {string} textToSummarize - The text transcription to summarize.
-         */
+        
         async function getTranscriptionSummary(textToSummarize) {
             summaryModal.classList.remove('hidden');
             summaryContent.textContent = 'Generating...';
@@ -513,7 +506,7 @@
                 return;
             }
             recordings.forEach(rec => {
-                if (!rec.audioDataUrl) return; // Skip if no audio data
+                if (!rec.audioDataUrl) return;
 
                 const card = document.createElement('div');
                 card.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-150 hover:shadow-md';
