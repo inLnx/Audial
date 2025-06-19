@@ -4,94 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audial - Advanced Voice Recorder</title>
-    <!-- Tailwind CSS CDN for utility-first styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts for 'Inter' typeface -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* Custom CSS for 'Inter' font family */
         body {
             font-family: 'Inter', sans-serif;
         }
 
-        /* Transition for menu buttons (though not directly used in this version's HTML) */
         .menu-button {
             transition: background-color 0.4s ease-out, transform 0.1s ease-out;
         }
 
-        /* Transition for the record button */
         .record-button {
             transition: background-color 0.2s ease-in-out, transform 0.1s ease-out;
         }
 
-        /* Styles for record button when recording */
         .record-button.recording {
-            background-color: #d64545; /* Red color when recording */
-            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); /* Subtle glow effect */
+            background-color: #d64545; 
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
         }
 
-        /* Hover styles for record button when recording */
         .record-button.recording:hover {
-            background-color: #2e0503; /* Darker red on hover */
-            transform: scale(0.98); /* Slight shrink effect on hover */
+            background-color: #2e0503; 
+            transform: scale(0.98); 
         }
 
-        /* Styles for the transcription display area */
         #transcriptionDisplay {
             min-height: 60px;
             padding: 15px;
-            background-color: #f3f4f6; /* Light gray background */
-            border-radius: 12px; /* Rounded corners */
-            font-size: 1.125rem; /* Text size */
-            color: #4b5563; /* Dark gray text color */
+            background-color: #f3f4f6; 
+            border-radius: 12px; 
+            font-size: 1.125rem; 
+            color: #4b5563; 
             text-align: center;
-            overflow-y: auto; /* Enable vertical scrolling if content overflows */
-            max-height: 180px; /* Maximum height before scrolling */
-            line-height: 1.6; /* Line height for better readability */
-            border: 0.5px solid #d1d5db; /* Light border */
+            overflow-y: auto; 
+            max-height: 180px; 
+            line-height: 1.6;
+            border: 0.5px solid #d1d5db;
         }
 
 
-        /* Custom styles for the summary loader spinner */
         .summary-loader {
-            border: 4px solid #f3f3f3; /* Light gray border */
-            border-top: 4px solid #6b21a8; /* Purple top border for spinner effect */
-            border-radius: 50%; /* Makes it a circle */
-            width: 28px; /* Spinner size */
+            border: 4px solid #f3f3f3; 
+            border-top: 4px solid #6b21a8; 
+            border-radius: 50%; 
+            width: 28px; 
             height: 28px;
-            animation: spin 2s linear infinite; /* Spin animation */
+            animation: spin 2s linear infinite; 
             display: inline-block;
             vertical-align: middle;
             margin-left: 10px;
         }
 
-        /* Keyframe animation for the spinner */
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
 
-        /* Box shadow for the main app container */
         #app-container {
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
 
-        /* Styles for the transcription toggle checkbox when checked */
         .form-checkbox:checked {
-            background-color: #b13696; /* Purple background */
-            border-color: #2563eb; /* Blue border */
+            background-color: #b13696;
+            border-color: #2563eb; 
         }
-        /* Focus styles for the transcription toggle checkbox */
         .form-checkbox:focus {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); /* Blue glow on focus */
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
             outline: none;
         }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 flex items-center justify-center min-h-screen p-4 sm:p-6">
-    <!-- Main application container -->
     <div id="app-container" class="relative w-full max-w-4xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden" style="min-height: 600px; max-height: 80vh;">
-        <!-- "More" button for navigation (top right) -->
         <div class="absolute top-4 right-4 z-10">
             <a href="more.html" class="inline-block">
                 <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-sm text-sm transition-all duration-200 ease-in-out hover:scale-105">
@@ -100,44 +85,30 @@
             </a>
         </div>
 
-        <!-- Main Content Area: Flex container for panels -->
-        <!-- This container handles switching between vertical (mobile) and horizontal (desktop) layouts -->
+    
         <div class="flex h-full flex-col md:flex-row">
-            <!-- Left Panel: Recordings List -->
-            <!-- On mobile, hidden by default. Will be shown full-width when "Your Recordings" button is clicked. -->
-            <!-- On desktop (md:), it's a 1/3 width flex column. -->
+           
             <div id="recordingsPanel" class="w-full md:w-1/3 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200 p-6 flex-col hidden md:flex">
                 <h2 class="text-xl font-bold mb-5 text-gray-700">Your Recordings</h2>
                 <div id="recordingsList" class="space-y-4 overflow-y-auto flex-grow pr-2">
-                    <!-- Recordings will be dynamically loaded here by JavaScript -->
                 </div>
-                <!-- Button to go back to recorder view (visible only on mobile when this panel is active) -->
                 <button id="backToRecorderButton" class="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg w-full transition-colors duration-200 hidden">Back to Recorder</button>
             </div>
 
-            <!-- Right Panel: Recording Controls -->
-            <!-- On mobile, shown full-width by default. Will be hidden when "Your Recordings" button is clicked. -->
-            <!-- On desktop (md:), it's a 2/3 width flex column. -->
-            <div id="recorderPanel" class="w-full md:w-2/3 flex flex-col items-center justify-between p-8 sm:p-10">
-                <!-- Button to show recordings (visible only on mobile, when this panel is active) -->
-                <button id="showRecordingsButton" class="md:hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-sm text-sm transition-all duration-200 ease-in-out mb-4">
+    
+            <div id="recorderPanel" class="w-full md:w-2/3 flex flex-col items-center justify-between p-8 sm:p-10">                <button id="showRecordingsButton" class="md:hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-sm text-sm transition-all duration-200 ease-in-out mb-4">
                     Your Recordings
                 </button>
-                <!-- Toggle for live transcription -->
                 <div class="flex items-center space-x-3 mb-8">
                     <input type="checkbox" id="transcriptionToggle" class="form-checkbox h-5 w-5 text-blue-500 rounded-md cursor-pointer">
                     <label for="transcriptionToggle" class="text-lg text-gray-700 select-none cursor-pointer">Enable Live Transcription</label>
                 </div>
-
-                <!-- Timer and transcription display -->
                 <div class="flex-grow flex items-center justify-center flex-col w-full px-4">
                     <div id="timer" class="text-7xl lg:text-8xl font-mono font-extrabold text-gray-900 mb-6 tracking-tight">00:00</div>
                     <div id="transcriptionDisplay" class="w-full text-center text-base text-gray-600 border border-gray-300 rounded-lg p-3 overflow-y-auto max-h-40 shadow-inner">
                         <p class="text-black-400">Audial</p>
                     </div>
                 </div>
-
-                <!-- Record button -->
                 <div class="flex-shrink-0 mt-10">
                     <button id="recordButton" class="record-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-16 rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 text-2xl uppercase tracking-wide">
                         Start Recording
@@ -169,19 +140,17 @@
     </div>
 
     <script type="module">
-        // Global variables for recording and transcription
         let mediaRecorder;
         let audioChunks = [];
         let timerInterval;
         let seconds = 0;
         let isRecording = false;
-        let sessionRecordings = []; // Stores recordings for the current session
+        let sessionRecordings = [];
 
         let speechRecognition;
-        let currentLiveTranscription = ''; // Stores the live transcription text
-        let isTranscriptionEnabled = false; // Flag to check if transcription is enabled
+        let currentLiveTranscription = ''; 
+        let isTranscriptionEnabled = false; 
 
-        // DOM element references
         const recordButton = document.getElementById('recordButton');
         const timerDisplay = document.getElementById('timer');
         const recordingsList = document.getElementById('recordingsList');
@@ -193,38 +162,25 @@
         const summaryContent = document.getElementById('summaryContent');
         const summaryLoader = document.getElementById('summaryLoader');
 
-        // New DOM element references for responsive view management
         const recordingsPanel = document.getElementById('recordingsPanel');
         const recorderPanel = document.getElementById('recorderPanel');
         const showRecordingsButton = document.getElementById('showRecordingsButton');
         const backToRecorderButton = document.getElementById('backToRecorderButton');
 
 
-        /**
-         * Formats total seconds into a MM:SS string.
-         * @param {number} totalSeconds - The total number of seconds.
-         * @returns {string} Formatted time string (e.g., "00:00", "01:23").
-         */
+    
         function formatTime(totalSeconds) {
             const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
             const secs = (totalSeconds % 60).toString().padStart(2, '0');
             return `${minutes}:${secs}`;
         }
 
-        /**
-         * Displays an error message in a modal.
-         * @param {string} message - The error message to display.
-         */
         function displayError(message) {
             errorMessage.textContent = message;
             errorModal.classList.remove('hidden');
         }
 
-        /**
-         * Converts a Blob object to a Base64 data URL.
-         * @param {Blob} blob - The Blob to convert.
-         * @returns {Promise<string>} A promise that resolves with the Base64 data URL.
-         */
+      
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -234,11 +190,7 @@
             });
         }
 
-        /**
-         * Triggers a download of a given data URL as a file.
-         * @param {string} dataUrl - The data URL to download.
-         * @param {string} filename - The desired filename for the download.
-         */
+       
         function triggerDownload(dataUrl, filename) {
             const a = document.createElement('a');
             a.href = dataUrl;
@@ -248,9 +200,7 @@
             document.body.removeChild(a);
         }
 
-        /**
-         * Toggles the recording state (start or stop).
-         */
+        
         async function toggleRecording() {
             if (isRecording) {
                 stopRecording();
@@ -259,65 +209,55 @@
             }
         }
 
-        /**
-         * Initiates the audio recording and live transcription (if enabled).
-         */
+       
         async function startRecording() {
             try {
-                // Request microphone access
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 mediaRecorder = new MediaRecorder(stream);
 
                 audioChunks = [];
                 seconds = 0;
                 currentLiveTranscription = '';
-                transcriptionDisplay.textContent = 'Audial'; // Reset transcription display
+                transcriptionDisplay.textContent = 'Audial'; 
 
-                // Collect audio data chunks
                 mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) {
                         audioChunks.push(event.data);
                     }
                 };
 
-                // Handle recording stop event
                 mediaRecorder.onstop = async () => {
                     const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                     try {
                         const audioDataUrl = await blobToBase64(audioBlob);
-                        saveRecordingToSession(audioDataUrl, currentLiveTranscription); // Save the recording
+                        saveRecordingToSession(audioDataUrl, currentLiveTranscription); 
                     } catch (error) {
                         console.error("Failed to process recording:", error);
                         displayError("Couldn't save your recording. Please try again!");
                     } finally {
-                        // Stop all media tracks (microphone)
                         stream.getTracks().forEach(track => track.stop());
-                        // Stop speech recognition if active
                         if (speechRecognition && isTranscriptionEnabled) {
                             speechRecognition.stop();
                         }
                     }
                 };
 
-                // Start the media recorder
+                
                 mediaRecorder.start();
                 isRecording = true;
-                recordButton.textContent = '⏹'; // Change button text to stop icon
+                recordButton.textContent = '⏹'; 
                 recordButton.classList.add('recording');
 
-                // Start the timer
                 timerInterval = setInterval(() => {
                     seconds++;
                     timerDisplay.textContent = formatTime(seconds);
                 }, 1000);
 
-                // Start live transcription if enabled
                 if (isTranscriptionEnabled) {
                     startLiveTranscription();
                 }
 
             } catch (err) {
-                // Handle microphone access errors
                 console.error("Microphone access error:", err);
                 if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
                     displayError("We need microphone access to record! Please allow it in your browser settings.");
@@ -326,49 +266,43 @@
                 } else {
                     displayError("An unexpected error occurred accessing your microphone. (" + err.message + ")");
                 }
-                isRecording = false; // Ensure recording state is false on error
+                isRecording = false; 
                 if (speechRecognition) {
-                    speechRecognition.stop(); // Stop speech recognition in case of error
+                    speechRecognition.stop(); 
                 }
             }
         }
 
-        /**
-         * Stops the audio recording and associated processes.
-         */
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === "recording") {
-                mediaRecorder.stop(); // Stop the media recorder
+                mediaRecorder.stop(); 
             }
             isRecording = false;
-            recordButton.textContent = '▶'; // Change button text to play icon
+            recordButton.textContent = '▶'; 
             recordButton.classList.remove('recording');
-            clearInterval(timerInterval); // Stop the timer
-            timerDisplay.textContent = '00:00'; // Reset timer display
+            clearInterval(timerInterval); 
+            timerDisplay.textContent = '00:00'; 
             if (speechRecognition && isTranscriptionEnabled) {
-                speechRecognition.stop(); // Stop speech recognition
+                speechRecognition.stop(); 
             }
         }
 
-        /**
-         * Initializes and starts the Web Speech API for live transcription.
-         */
+        
         function startLiveTranscription() {
             window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-            // Check for browser support
+            
             if (!window.SpeechRecognition) {
                 displayError("Your browser doesn't support live transcription. Try a Chromium or Safari browser.");
-                transcriptionToggle.checked = false; // Uncheck the toggle if not supported
+                transcriptionToggle.checked = false; 
                 return;
             }
 
             speechRecognition = new SpeechRecognition();
-            speechRecognition.interimResults = true; // Get interim results for live display
-            speechRecognition.continuous = true; // Keep listening even after pauses
-            speechRecognition.lang = 'en-US'; // Set language
+            speechRecognition.interimResults = true; 
+            speechRecognition.continuous = true;
+            speechRecognition.lang = 'en-US'; 
 
-            // Handle speech recognition results
             speechRecognition.onresult = event => {
                 let interimTranscript = '';
                 let finalTranscript = '';
@@ -376,13 +310,13 @@
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        finalTranscript += transcript + ' '; // Add final results
+                        finalTranscript += transcript + ' '; 
                     } else {
-                        interimTranscript += transcript; // Add interim results
+                        interimTranscript += transcript; 
                     }
                 }
                 currentLiveTranscription = finalTranscript + interimTranscript;
-                transcriptionDisplay.textContent = currentLiveTranscription || 'Still listening...'; // Update display
+                transcriptionDisplay.textContent = currentLiveTranscription || 'Still listening...'; 
             };
 
             speechRecognition.onerror = event => {
