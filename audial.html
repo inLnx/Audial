@@ -3,11 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audial - Advanced Voice Recorder</title> <script src="https://cdn.tailwindcss.com"></script>
+    <title>Audial - Advanced Voice Recorder</title> 
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
+        }
+
+        .menu-button {
+            transition: background-color 0.4s ease-out, transform 0.1s ease-out; 
+
         }
 
         .record-button {
@@ -35,7 +41,7 @@
             overflow-y: auto; 
             max-height: 180px; 
             line-height: 1.6;
-            border: 1px solid #e5e7eb; 
+            border: 0.5px 
         }
         
         
@@ -58,7 +64,7 @@
 
         
         #app-container {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); /* More pronounced shadow */
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
         }
 
             .form-checkbox:checked {
@@ -78,6 +84,7 @@
                 </button>
             </a>
         </div>
+        
         <div class="flex flex-col md:flex-row h-full"> <div class="w-full md:w-1/3 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200 p-6 flex flex-col">
                 <h2 class="text-xl font-bold mb-5 text-gray-700">Your Recordings</h2> <div id="recordingsList" class="space-y-4 overflow-y-auto flex-grow pr-2"> </div>
             </div>
@@ -86,7 +93,7 @@
                 </div>
 
                 <div class="flex-grow flex items-center justify-center flex-col w-full px-4"> <div id="timer" class="text-7xl lg:text-8xl font-mono font-extrabold text-gray-900 mb-6 tracking-tight">00:00</div> <div id="transcriptionDisplay" class="w-full text-center text-base text-gray-600 border border-gray-300 rounded-lg p-3 overflow-y-auto max-h-40 shadow-inner">
-                        <p class="text-gray-400 italic">Start recording to see live transcription...</p> </div>
+                        <p class="text-black-400">Audial</p> </div>
                 </div>
                 
                 <div class="flex-shrink-0 mt-10"> <button id="recordButton" class="record-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-16 rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 text-2xl uppercase tracking-wide"> Start Recording
@@ -189,7 +196,7 @@
                 audioChunks = [];
                 seconds = 0;
                 currentLiveTranscription = '';
-                transcriptionDisplay.textContent = 'Listening for your voice...'; 
+                transcriptionDisplay.textContent = 'Audial'; 
 
                 mediaRecorder.ondataavailable = event => {
                     if (event.data.size > 0) { 
@@ -204,7 +211,7 @@
                         saveRecordingToSession(audioDataUrl, currentLiveTranscription); 
                     } catch (error) {
                         console.error("Failed to process recording:", error);
-                        displayError("Couldn't save your recording. Please try again!"); // More conversational error
+                        displayError("Couldn't save your recording. Please try again!"); 
                     } finally {
                         stream.getTracks().forEach(track => track.stop());
                         if (speechRecognition && isTranscriptionEnabled) {
@@ -215,9 +222,9 @@
 
                 mediaRecorder.start();
                 isRecording = true;
-                recordButton.textContent = 'Stop Recording'; 
+                recordButton.textContent = '⏹'; 
                 recordButton.classList.add('recording');
-                
+               
                
                 timerInterval = setInterval(() => {
                     seconds++;
@@ -246,11 +253,11 @@
 
       
         function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === "recording") { // Check state before stopping
+            if (mediaRecorder && mediaRecorder.state === "recording") { 
                 mediaRecorder.stop();
             }
             isRecording = false;
-            recordButton.textContent = 'Start Recording'; 
+            recordButton.textContent = '▶'; 
             recordButton.classList.remove('recording');
             clearInterval(timerInterval); 
             timerDisplay.textContent = '00:00'; 
@@ -263,8 +270,7 @@
             window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
             if (!window.SpeechRecognition) {
-                displayError("Your browser doesn't support live transcription. Try a Chromium or Safari browser."); // More helpful message
-                isTranscriptionEnabled = false; 
+                displayError("Your browser doesn't support live transcription. Try a Chromium or Safari browser."); 
                 transcriptionToggle.checked = false;
                 return;
             }
@@ -287,18 +293,18 @@
                     }
                 }
                 currentLiveTranscription = finalTranscript + interimTranscript;
-                transcriptionDisplay.textContent = currentLiveTranscription || 'Still listening...'; // Dynamic message
+                transcriptionDisplay.textContent = currentLiveTranscription || 'Still listening...'; 
             };
 
             speechRecognition.onerror = event => {
                 console.error('Speech Recognition Error:', event.error);
                 let message = `Transcription error: "${event.error}".`;
                 if (event.error === 'not-allowed') {
-                    message = "Microphone permission might be blocked for transcription. Check your browser settings."; 
+                    message = "Microphone blocked."; 
                 } else if (event.error === 'no-speech') {
-                    message = "Didn't hear any speech. Make sure your microphone is working!";
+                    message = "No speech detected.";
                 } else if (event.error === 'network') {
-                    message = "Network issue. Please check your internet connection for transcription.";
+                    message = "Connect to the internet and try again.";
                 }
                 displayError(message);
                 
@@ -312,16 +318,16 @@
             
             speechRecognition.onend = () => {
                 if (isRecording && isTranscriptionEnabled) {
-                    console.log("Speech recognition stopped, attempting restart...");
+                    console.log("Speech recognition stopped, restarting");
                     try {
                          speechRecognition.start();
                     } catch (e) {
-                        console.warn("Failed to restart speech recognition:", e);
+                        console.warn("Failed to restart:", e);
                         displayError("Couldn't restart live transcription. Please try recording again.");
                     }
                 } else {
                     console.log("Speech recognition gracefully stopped.");
-                    transcriptionDisplay.textContent = currentLiveTranscription || 'Transcription ended.'; // Final message
+                    transcriptionDisplay.textContent = currentLiveTranscription || 'Transcription ended.'; 
                 }
             };
 
@@ -346,7 +352,7 @@
                 
                 const payload = { contents: chatHistory };
                 const apiKey = "AIzaSyC0iXmXyUU_rMXFLCF8T63_mUDIgzCl8Io";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; // Using gemini-pro for better summaries
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`; 
 
                 const response = await fetch(apiUrl, {
                     method: 'POST',
@@ -395,7 +401,7 @@
         
 
         function deleteRecordingFromSession(id) {
-            if (!confirm('Are you sure you want to delete this recording?')) { 
+            if (!confirm('Confirm Deletion')) { 
                 return;
             }
             sessionRecordings = sessionRecordings.filter(rec => rec.id !== id);
@@ -407,14 +413,14 @@
         function renderRecordingsList(recordings) { 
             recordingsList.innerHTML = ''; 
             if (recordings.length === 0) {
-                recordingsList.innerHTML = `<p class="text-gray-500 text-center py-4">No recordings yet! Start a new one to see it appear here.</p>`; // Friendlier empty state
+                recordingsList.innerHTML = `<p class="text-gray-500 text-center py-4">No recordings yet.</p>`; 
                 return;
             }
             recordings.forEach(rec => {
                 if (!rec.audioDataUrl) return; 
 
                 const card = document.createElement('div');
-                card.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-150 hover:shadow-md'; // Added hover effect
+                card.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-150 hover:shadow-md'; 
 
                 const nameEl = document.createElement('p');
                 nameEl.className = 'font-semibold text-gray-800 truncate text-base mb-1';
@@ -430,7 +436,7 @@
                 audioEl.className = 'w-full my-3 rounded-md'; 
                 if (rec.transcription && rec.transcription !== '') { 
                       const transcriptionEl = document.createElement('p');
-                    transcriptionEl.className = 'text-sm text-gray-600 italic border-t border-gray-100 pt-3 mt-3 max-h-24 overflow-y-auto'; // Adjusted styling
+                    transcriptionEl.className = 'text-sm text-gray-600 italic border-t border-gray-100 pt-3 mt-3 max-h-24 overflow-y-auto'; 
                     transcriptionEl.textContent = `"${rec.transcription}"`;
                     card.appendChild(transcriptionEl);
                 }
@@ -462,7 +468,7 @@
                 `;
                 downloadBtn.className = 'text-blue-600 hover:text-blue-800 text-sm font-semibold py-2 px-3 rounded-md flex items-center justify-center transition-colors duration-200';
                 downloadBtn.onclick = () => {
-                    const filename = `Audial-Recording-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`; // More robust filename
+                    const filename = `Recording-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`; 
                     triggerDownload(rec.audioDataUrl, filename);
                 };
                 
@@ -497,9 +503,9 @@
             transcriptionToggle.addEventListener('change', () => {
                 isTranscriptionEnabled = transcriptionToggle.checked;
                 if (isTranscriptionEnabled && !isRecording) {
-                    transcriptionDisplay.textContent = 'Live transcription will begin when you hit "Start Recording"!';
+                    transcriptionDisplay.textContent = 'Start recording to transcribe';
                 } else if (!isTranscriptionEnabled && !isRecording) {
-                     transcriptionDisplay.textContent = 'Transcription will appear here if enabled during recording.';
+                     transcriptionDisplay.textContent = 'Audial';
                 }
                 if (isRecording) {
                     if (isTranscriptionEnabled && (!speechRecognition || speechRecognition.state === 'inactive')) {
@@ -509,7 +515,7 @@
                     }
                 }
             });
-            // Set initial state of transcription based on checkbox
+            
             isTranscriptionEnabled = transcriptionToggle.checked;
         }
 
