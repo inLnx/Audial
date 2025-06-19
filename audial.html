@@ -19,7 +19,7 @@
         .record-button {
             transition: background-color 0.2s ease-in-out, transform 0.1s ease-out; 
         }
-
+ 
         .record-button.recording {
             background-color: #d64545;
             box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); 
@@ -27,7 +27,7 @@
 
         .record-button.recording:hover {
             background-color: #2e0503; 
-            transform: scale(0.98); 
+            transform: scale(0.98);  
         }
 
         #transcriptionDisplay {
@@ -238,11 +238,11 @@
             } catch (err) {
                 console.error("Microphone access error:", err);
                 if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
-                    displayError("We need microphone access to record! Please allow it in your browser settings.");
+                    displayError("Enable microphone access and try again.");
                 } else if (err.name === "NotFoundError") {
                     displayError("No microphone found.");
                 } else {
-                    displayError("An unexpected error occurred accessing your microphone. (" + err.message + ")");
+                    displayError("an error occurred accessing your microphone. (" + err.message + ")");
                 }
                 isRecording = false; 
                 if (speechRecognition) {
@@ -270,7 +270,7 @@
             window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
             if (!window.SpeechRecognition) {
-                displayError("Your browser doesn't support live transcription. Try a Chromium or Safari browser."); 
+                displayError("Your browser doesn't support live transcription. Try a Chromium based browser."); 
                 transcriptionToggle.checked = false;
                 return;
             }
