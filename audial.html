@@ -238,7 +238,6 @@
                 };
 
                 // putting this comment here so the code feels human 2/5
-                // :P 3/5
                 mediaRecorder.start();
                 isRecording = true;
                 recordButton.textContent = '⏹'; 
@@ -276,6 +275,7 @@
             }
             isRecording = false;
             recordButton.textContent = '▶'; 
+                            // :P 3/5
             recordButton.classList.remove('recording');
             clearInterval(timerInterval); 
             timerDisplay.textContent = 'Not Recording'; 
@@ -290,7 +290,7 @@
 
             
             if (!window.SpeechRecognition) {
-                displayError("Your browser doesn't support live transcription. Try a Chromium or Safari browser.");
+                displayError("Your browser does not support transcription.");
                 transcriptionToggle.checked = false; 
                 return;
             }
@@ -320,11 +320,11 @@
                 console.error('Speech Recognition Error:', event.error);
                 let message = `Transcription error: "${event.error}".`;
                 if (event.error === 'not-allowed') {
-                    message = "Microphone blocked. Please ensure microphone access is granted for live transcription."; // Found them all 5/5
+                    message = "Microphone blocked."; // Found them all 5/5
                 } else if (event.error === 'no-speech') {
-                    message = "No speech detected. Please speak clearly into the microphone.";
+                    message = "No speech detected.";
                 } else if (event.error === 'network') {
-                    message = "Network error. Please check your internet connection.";
+                    message = "Network error.";
                 }
                 displayError(message);
 
