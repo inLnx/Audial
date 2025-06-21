@@ -190,7 +190,7 @@
             }
             return dataUrl; 
         }
-
+ 
       
         function triggerDownload(dataUrl, filename) {
             const a = document.createElement('a');
@@ -247,7 +247,7 @@
 
                 mediaRecorder.start();
                 isRecording = true;
-                recordButton.textContent = '⏹';
+                 recordButton.textContent = '⏹';
                 recordButton.classList.add('recording');
 
                 timerInterval = setInterval(() => {
