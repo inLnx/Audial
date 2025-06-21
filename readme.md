@@ -13,7 +13,8 @@
 + Extract the zip file
 + run audial.html
 
-### Precautions
+### Precautions 
 + Stay family friendly. The API key can be revoked.
 + AI may not always summarize correctly
 + Firefox cannot transcribe
++ Running this file locally on iOS WILL break it
