@@ -167,20 +167,12 @@
             return `${minutes}:${secs}`;
         }
 
-        /**
-         * Displays an error message in a modal.
-         * @param {string} message - The error message to display.
-         */
+        
         function displayError(message) {
             errorMessage.textContent = message;
             errorModal.classList.remove('hidden');
         }
 
-        /**
-         * Converts an audio Blob to a Data URL (base64).
-         * @param {Blob} blob - The audio blob to convert.
-         * @returns {Promise<string>} A Promise that resolves with the Data URL.
-         */
         function blobToBase64(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -190,24 +182,16 @@
             });
         }
 
-        /**
-         * Extracts the raw base64 string from a Data URL.
-         * @param {string} dataUrl - The Data URL (e.g., "data:audio/webm;base64,...").
-         * @returns {string} The raw base64 string without the prefix.
-         */
+        
         function extractBase64FromDataUrl(dataUrl) {
             const parts = dataUrl.split(',');
             if (parts.length > 1) {
                 return parts[1];
             }
-            return dataUrl; // Return as is if not a data URL
+            return dataUrl; 
         }
 
-        /**
-         * Triggers a download of a given Data URL as a file.
-         * @param {string} dataUrl - The Data URL to download.
-         * @param {string} filename - The desired filename for the download.
-         */
+      
         function triggerDownload(dataUrl, filename) {
             const a = document.createElement('a');
             a.href = dataUrl;
@@ -217,9 +201,7 @@
             document.body.removeChild(a);
         }
 
-        /**
-         * Toggles the recording state (start or stop recording).
-         */
+       
         async function toggleRecording() {
             if (isRecording) {
                 stopRecording();
@@ -228,9 +210,7 @@
             }
         }
 
-        /**
-         * Starts the audio recording and live transcription (if enabled).
-         */
+       
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -252,7 +232,6 @@
                     try {
                         const audioDataUrl = await blobToBase64(audioBlob);
                         const rawBase64Audio = extractBase64FromDataUrl(audioDataUrl);
-                        // Music detection using Gemini API
                         const hasMusic = await detectMusic(rawBase64Audio, audioBlob.type);
                         saveRecordingToSession(audioDataUrl, currentLiveTranscription, hasMusic);
                     } catch (error) {
@@ -296,9 +275,7 @@
             }
         }
 
-        /**
-         * Stops the audio recording and associated processes.
-         */
+      
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
@@ -313,9 +290,7 @@
             }
         }
 
-        /**
-         * Initiates live speech transcription using the Web Speech API.
-         */
+       
         function startLiveTranscription() {
             window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
@@ -385,10 +360,6 @@
             transcriptionDisplay.textContent = 'Listening...';
         }
 
-        /**
-         * Calls the Gemini API to get a summary of the provided text.
-         * @param {string} textToSummarize - The text transcription to summarize.
-         */
         async function getTranscriptionSummary(textToSummarize) {
             summaryModal.classList.remove('hidden');
             summaryContent.textContent = 'Generating...';
@@ -405,7 +376,7 @@
                 chatHistory.push({ role: "user", parts: [{ text: `Please provide a concise summary of the following audio transcription. Focus on key points and main ideas:\n\n"${textToSummarize}"` }] });
 
                 const payload = { contents: chatHistory };
-                const apiKey = ""; // Canvas will inject the API key
+                const apiKey = "AIzaSyC0iXmXyUU_rMXFLCF8T63_mUDIgzCl8Io"; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
                 const response = await fetch(apiUrl, {
@@ -438,12 +409,7 @@
             }
         }
 
-        /**
-         * Detects if music is present in the given base64 encoded audio data using the Gemini API.
-         * @param {string} base64AudioData - The raw base64 string of the audio.
-         * @param {string} mimeType - The MIME type of the audio (e.g., 'audio/webm').
-         * @returns {Promise<boolean>} A Promise that resolves to true if music is detected, false otherwise.
-         */
+ 
         async function detectMusic(base64AudioData, mimeType) {
             console.log("Attempting music detection...");
             if (!base64AudioData) {
@@ -472,7 +438,7 @@
                     }
                 };
 
-                const apiKey = ""; // Canvas will inject the API key
+                const apiKey = "AIzaSyC0iXmXyUU_rMXFLCF8T63_mUDIgzCl8Io"; // Canvas will inject the API key
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
                 const response = await fetch(apiUrl, {
