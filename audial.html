@@ -358,7 +358,7 @@
         
         async function getTranscriptionSummary(textToSummarize) {
             summaryModal.classList.remove('hidden');
-            summaryContent.textContent = 'Generating...';
+              summaryContent.textContent = 'Generating...';
             summaryLoader.classList.remove('hidden');
 
             if (!textToSummarize || textToSummarize.trim() === '') {
