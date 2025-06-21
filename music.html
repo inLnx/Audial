@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audial - Advanced Voice Recorder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Verdana', sans-serif;
+        }
+
+        .record-button {
+            transition: background-color 0.4s ease-in-out, transform 0.2s ease-out;
+        }
+
+        .record-button.recording {
+            background-color: #d64545;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+        }
+
+        .record-button.recording:hover {
+            background-color: #2e0503;
+            transform: scale(0.98);
+        }
+
+        #transcriptionDisplay {
+            min-height: 60px;
+            padding: 15px;
+            background-color: #f3f4f6;
+            border-radius: 12px;
+            font-size: 1.125rem;
+            color: #4b5563;
+            text-align: center;
+            overflow-y: auto;
+            max-height: 176px;
+            line-height: 1.6;
+            border: 0.5px solid #d1d5db;
+        }
+
+
+        .summary-loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #5468aa;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            animation: spin 2s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #app-container {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .form-checkbox:checked {
+            background-color: #b13696;
+            border-color: #2563eb;
+        }
+        .form-checkbox:focus {
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+            outline: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 flex items-center justify-center min-h-screen p-4 sm:p-6">
+    <div id="app-container" class="relative w-full max-w-4xl mx-auto bg-white shadow-xl rounded-xl overflow-hidden" style="min-height: 600px; max-height: 80vh;">
+        <div class="absolute top-4 right-4 z-10">
+            <a href="more.html" class="inline-block">
+                <button class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-sm text-sm transition-all duration-200 ease-in-out hover:scale-105">
+                    𓃑
+                </button>
+            </a>
+        </div>
+
+        <div class="flex h-full flex-col md:flex-row">
+            <div id="recordingsPanel" class="w-full md:w-1/3 bg-gray-50 border-b md:border-b-0 md:border-r border-gray-200 p-6 flex-col hidden md:flex">
+                <h2 class="text-xl font-bold mb-5 text-gray-700">Your Recordings</h2>
+                <div id="recordingsList" class="space-y-4 overflow-y-auto flex-grow pr-2">
+                </div>
+                <button id="backToRecorderButton" class="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg w-full transition-colors duration-200 hidden">Back to Recorder</button>
+            </div>
+
+            <div id="recorderPanel" class="w-full md:w-2/3 flex flex-col items-center justify-between p-8 sm:p-10">
+                <button id="showRecordingsButton" class="md:hidden bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-full shadow-sm text-sm transition-all duration-200 ease-in-out mb-4">
+                    Recordings
+                </button>
+                <div class="flex items-center space-x-3 mb-8">
+                    <input type="checkbox" id="transcriptionToggle" class="form-checkbox h-5 w-5 text-blue-500 rounded-md cursor-pointer">
+                    <label for="transcriptionToggle" class="text-lg text-gray-700 select-none cursor-pointer">Enable Live Transcription</label>
+                </div>
+                <div class="flex-grow flex items-center justify-center flex-col w-full px-4">
+                    <div id="timer" class="text-7xl lg:text-8xl font-mono font-extrabold text-gray-900 mb-6 tracking-tight">Not Recording</div>
+                    <div id="transcriptionDisplay" class="w-full text-center text-base text-gray-600 border border-gray-300 rounded-lg p-3 overflow-y-auto max-h-40 shadow-inner">
+                        <p class="text-black-400">Audial</p>
+                    </div>
+                </div>
+                <div class="flex-shrink-0 mt-10">
+                    <button id="recordButton" class="record-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-16 rounded-full shadow-lg focus:outline-none focus:ring-4 focus:ring-blue-300 text-2xl uppercase tracking-wide">
+                        ▶
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="errorModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-7 rounded-lg shadow-2xl max-w-sm w-full mx-auto text-center">
+            <h3 class="text-xl font-bold mb-4 text-red-600">Something went wrong.</h3>
+            <p id="errorMessage" class="text-gray-700 mb-5"></p>
+            <button onclick="document.getElementById('errorModal').classList.add('hidden')" class="mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg w-full transition-colors duration-200">Got It</button>
+        </div>
+    </div>
+
+    <div id="summaryModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+        <div class="bg-white p-7 rounded-lg shadow-2xl max-w-lg w-full mx-auto">
+            <h3 class="text-xl font-bold mb-4 flex items-center text-gray-800">
+                Summary
+                <span id="summaryLoader" class="summary-loader hidden"></span>
+            </h3>
+            <div id="summaryContent" class="text-gray-700 max-h-80 overflow-y-auto border border-gray-200 p-4 rounded-md bg-gray-50 leading-relaxed text-base"></div>
+            <button onclick="document.getElementById('summaryModal').classList.add('hidden'); document.getElementById('summaryContent').textContent = '';" class="mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg w-full transition-colors duration-200">Close Summary</button>
+        </div>
+    </div>
+
+    <script type="module">
+        let mediaRecorder;
+        let audioChunks = [];
+        let timerInterval;
+        let seconds = 0;
+        let isRecording = false;
+        let sessionRecordings = [];
+
+        let speechRecognition;
+        let currentLiveTranscription = '';
+        let isTranscriptionEnabled = false;
+
+        const recordButton = document.getElementById('recordButton');
+        const timerDisplay = document.getElementById('timer');
+        const recordingsList = document.getElementById('recordingsList');
+        const errorModal = document.getElementById('errorModal');
+        const errorMessage = document.getElementById('errorMessage');
+        const transcriptionToggle = document.getElementById('transcriptionToggle');
+        const transcriptionDisplay = document.getElementById('transcriptionDisplay');
+        const summaryModal = document.getElementById('summaryModal');
+        const summaryContent = document.getElementById('summaryContent');
+        const summaryLoader = document.getElementById('summaryLoader');
+        const recordingsPanel = document.getElementById('recordingsPanel');
+        const recorderPanel = document.getElementById('recorderPanel');
+        const showRecordingsButton = document.getElementById('showRecordingsButton');
+        const backToRecorderButton = document.getElementById('backToRecorderButton');
+
+        
+     
+        
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const secs = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${minutes}:${secs}`;
+        }
+
+        /**
+         * Displays an error message in a modal.
+         * @param {string} message - The error message to display.
+         */
+        function displayError(message) {
+            errorMessage.textContent = message;
+            errorModal.classList.remove('hidden');
+        }
+
+        /**
+         * Converts an audio Blob to a Data URL (base64).
+         * @param {Blob} blob - The audio blob to convert.
+         * @returns {Promise<string>} A Promise that resolves with the Data URL.
+         */
+        function blobToBase64(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        /**
+         * Extracts the raw base64 string from a Data URL.
+         * @param {string} dataUrl - The Data URL (e.g., "data:audio/webm;base64,...").
+         * @returns {string} The raw base64 string without the prefix.
+         */
+        function extractBase64FromDataUrl(dataUrl) {
+            const parts = dataUrl.split(',');
+            if (parts.length > 1) {
+                return parts[1];
+            }
+            return dataUrl; // Return as is if not a data URL
+        }
+
+        /**
+         * Triggers a download of a given Data URL as a file.
+         * @param {string} dataUrl - The Data URL to download.
+         * @param {string} filename - The desired filename for the download.
+         */
+        function triggerDownload(dataUrl, filename) {
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        /**
+         * Toggles the recording state (start or stop recording).
+         */
+        async function toggleRecording() {
+            if (isRecording) {
+                stopRecording();
+            } else {
+                await startRecording();
+            }
+        }
+
+        /**
+         * Starts the audio recording and live transcription (if enabled).
+         */
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+
+                audioChunks = [];
+                seconds = 0;
+                currentLiveTranscription = '';
+                transcriptionDisplay.textContent = 'Audial';
+
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    try {
+                        const audioDataUrl = await blobToBase64(audioBlob);
+                        const rawBase64Audio = extractBase64FromDataUrl(audioDataUrl);
+                        // Music detection using Gemini API
+                        const hasMusic = await detectMusic(rawBase64Audio, audioBlob.type);
+                        saveRecordingToSession(audioDataUrl, currentLiveTranscription, hasMusic);
+                    } catch (error) {
+                        console.error("Failed to process recording or detect music:", error);
+                        displayError("Couldn't complete action. Try again. (Processing error)");
+                    } finally {
+                        stream.getTracks().forEach(track => track.stop());
+                        if (speechRecognition && isTranscriptionEnabled) {
+                            speechRecognition.stop();
+                        }
+                    }
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordButton.textContent = '⏹';
+                recordButton.classList.add('recording');
+
+                timerInterval = setInterval(() => {
+                    seconds++;
+                    timerDisplay.textContent = formatTime(seconds);
+                }, 1000);
+
+                if (isTranscriptionEnabled) {
+                    startLiveTranscription();
+                }
+
+            } catch (err) {
+                console.error("Microphone access error:", err);
+                if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+                    displayError("We need microphone access to record! Please allow it in your browser settings.");
+                } else if (err.name === "NotFoundError") {
+                    displayError("No microphone found.");
+                } else {
+                    displayError("An error occurred. (" + err.message + ")");
+                }
+                isRecording = false;
+                if (speechRecognition) {
+                    speechRecognition.stop();
+                }
+            }
+        }
+
+        /**
+         * Stops the audio recording and associated processes.
+         */
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                mediaRecorder.stop();
+            }
+            isRecording = false;
+            recordButton.textContent = '▶';
+            recordButton.classList.remove('recording');
+            clearInterval(timerInterval);
+            timerDisplay.textContent = 'Not Recording';
+            if (speechRecognition && isTranscriptionEnabled) {
+                speechRecognition.stop();
+            }
+        }
+
+        /**
+         * Initiates live speech transcription using the Web Speech API.
+         */
+        function startLiveTranscription() {
+            window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (!window.SpeechRecognition) {
+                displayError("Your browser does not support live transcription.");
+                transcriptionToggle.checked = false;
+                return;
+            }
+
+            speechRecognition = new SpeechRecognition();
+            speechRecognition.interimResults = true;
+            speechRecognition.continuous = true;
+            speechRecognition.lang = 'en-US';
+
+            speechRecognition.onresult = event => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+                currentLiveTranscription = finalTranscript + interimTranscript;
+                transcriptionDisplay.textContent = currentLiveTranscription || 'Still listening...';
+            };
+
+            speechRecognition.onerror = event => {
+                console.error('Speech Recognition Error:', event.error);
+                let message = `Transcription error: "${event.error}".`;
+                if (event.error === 'not-allowed') {
+                    message = "Microphone access blocked for transcription.";
+                } else if (event.error === 'no-speech') {
+                    message = "No speech detected.";
+                } else if (event.error === 'network') {
+                    message = "Network error during transcription.";
+                }
+                displayError(message);
+
+                if (speechRecognition) {
+                    speechRecognition.stop();
+                }
+                if (isRecording) {
+                    stopRecording();
+                }
+            };
+
+            speechRecognition.onend = () => {
+                if (isRecording && isTranscriptionEnabled) {
+                    console.log("Speech recognition stopped, attempting to restart...");
+                    try {
+                        speechRecognition.start();
+                    } catch (e) {
+                        console.warn("Failed to restart speech recognition:", e);
+                        displayError("Couldn't restart transcription.");
+                    }
+                } else {
+                    console.log("Transcription stopped.");
+                    transcriptionDisplay.textContent = currentLiveTranscription || 'Transcription ended.';
+                }
+            };
+
+            speechRecognition.start();
+            transcriptionDisplay.textContent = 'Listening...';
+        }
+
+        /**
+         * Calls the Gemini API to get a summary of the provided text.
+         * @param {string} textToSummarize - The text transcription to summarize.
+         */
+        async function getTranscriptionSummary(textToSummarize) {
+            summaryModal.classList.remove('hidden');
+            summaryContent.textContent = 'Generating...';
+            summaryLoader.classList.remove('hidden');
+
+            if (!textToSummarize || textToSummarize.trim() === '') {
+                summaryContent.textContent = "There's no text to summarize for this recording. Try a longer one!";
+                summaryLoader.classList.add('hidden');
+                return;
+            }
+
+            try {
+                let chatHistory = [];
+                chatHistory.push({ role: "user", parts: [{ text: `Please provide a concise summary of the following audio transcription. Focus on key points and main ideas:\n\n"${textToSummarize}"` }] });
+
+                const payload = { contents: chatHistory };
+                const apiKey = ""; // Canvas will inject the API key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorDetails = await response.json();
+                    throw new Error(`API call failed: ${response.status} - ${errorDetails.error?.message || 'Unknown error'}`);
+                }
+
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const summary = result.candidates[0].content.parts[0].text;
+                    summaryContent.textContent = summary;
+                } else {
+                    summaryContent.textContent = "The AI couldn't generate a summary at this time. Please try again.";
+                    console.error("Unexpected or empty API response:", result);
+                }
+            } catch (error) {
+                console.error("Error calling Gemini API for summary:", error);
+                summaryContent.textContent = `Couldn't generate summary: ${error.message}.`;
+            } finally {
+                summaryLoader.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Detects if music is present in the given base64 encoded audio data using the Gemini API.
+         * @param {string} base64AudioData - The raw base64 string of the audio.
+         * @param {string} mimeType - The MIME type of the audio (e.g., 'audio/webm').
+         * @returns {Promise<boolean>} A Promise that resolves to true if music is detected, false otherwise.
+         */
+        async function detectMusic(base64AudioData, mimeType) {
+            console.log("Attempting music detection...");
+            if (!base64AudioData) {
+                console.warn("No audio data for music detection.");
+                return false;
+            }
+
+            try {
+                const payload = {
+                    contents: [
+                        {
+                            role: "user",
+                            parts: [
+                                { text: "Analyze the provided audio. Is there any music present in this audio? Respond with only 'Yes' or 'No'. Do not add any other text." },
+                                {
+                                    inlineData: {
+                                        mimeType: mimeType,
+                                        data: base64AudioData
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        responseMimeType: "text/plain",
+                    }
+                };
+
+                const apiKey = ""; // Canvas will inject the API key
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorDetails = await response.json();
+                    console.error(`Music detection API call failed: ${response.status} - ${errorDetails.error?.message || 'Unknown error'}`);
+                    return false;
+                }
+
+                const result = await response.json();
+                if (result.candidates && result.candidates.length > 0 &&
+                    result.candidates[0].content && result.candidates[0].content.parts &&
+                    result.candidates[0].content.parts.length > 0) {
+                    const llmResponse = result.candidates[0].content.parts[0].text;
+                    console.log("LLM music detection response:", llmResponse);
+                    // Check for 'yes' (case-insensitive) in the response
+                    return llmResponse.trim().toLowerCase() === 'yes';
+                } else {
+                    console.warn("Unexpected or empty LLM response for music detection:", result);
+                    return false;
+                }
+            } catch (error) {
+                console.error("Error during music detection API call:", error);
+                return false;
+            }
+        }
+
+        /**
+         * Saves a new recording to the sessionRecordings array and updates the UI.
+         * @param {string} audioDataUrl - The Data URL of the recorded audio.
+         * @param {string} transcriptionText - The transcription of the audio.
+         * @param {boolean} hasMusic - True if music was detected, false otherwise.
+         */
+        function saveRecordingToSession(audioDataUrl, transcriptionText, hasMusic = false) {
+            const recordingId = `rec-${Date.now()}`;
+            const newRecording = {
+                id: recordingId,
+                name: `Voice Memo ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`,
+                timestamp: new Date().toISOString(),
+                audioDataUrl: audioDataUrl,
+                transcription: transcriptionText.trim(),
+                hasMusic: hasMusic
+            };
+            sessionRecordings.unshift(newRecording);
+            renderRecordingsList(sessionRecordings);
+        }
+
+        /**
+         * Deletes a recording from the sessionRecordings array.
+         * @param {string} id - The ID of the recording to delete.
+         */
+        function deleteRecordingFromSession(id) {
+            // Using a custom modal for confirmation instead of window.confirm
+            showConfirmationModal("Delete this recording?", () => {
+                sessionRecordings = sessionRecordings.filter(rec => rec.id !== id);
+                renderRecordingsList(sessionRecordings);
+            });
+        }
+
+        /**
+         * Renders (or re-renders) the list of recordings in the UI.
+         * @param {Array<Object>} recordings - An array of recording objects to display.
+         */
+        function renderRecordingsList(recordings) {
+            recordingsList.innerHTML = '';
+            if (recordings.length === 0) {
+                recordingsList.innerHTML = `<p class="text-gray-500 text-center py-4">No recordings yet.</p>`;
+                return;
+            }
+            recordings.forEach(rec => {
+                if (!rec.audioDataUrl) return;
+
+                const card = document.createElement('div');
+                card.className = 'bg-white p-4 rounded-lg border border-gray-200 shadow-sm transition-all duration-150 hover:shadow-md';
+
+                const nameEl = document.createElement('p');
+                nameEl.className = 'font-semibold text-gray-800 truncate text-base mb-1';
+                nameEl.textContent = rec.name;
+
+                const dateEl = document.createElement('p');
+                dateEl.className = 'text-xs text-gray-500 mb-3';
+                dateEl.textContent = new Date(rec.timestamp).toLocaleString();
+
+                const audioEl = document.createElement('audio');
+                audioEl.controls = true;
+                audioEl.src = rec.audioDataUrl;
+                audioEl.className = 'w-full my-3 rounded-md';
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'flex flex-wrap gap-2 mt-4';
+
+                // Display music detection result if available
+                if (rec.hasMusic) {
+                    const musicIndicator = document.createElement('span');
+                    musicIndicator.className = 'bg-pink-100 text-pink-700 text-xs font-semibold px-2 py-1 rounded-full flex items-center justify-center mr-2';
+                    musicIndicator.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-music-note-beamed mr-1" viewBox="0 0 16 16">
+                            <path d="M6.645 1.106c.376-.09.782.023 1.092.323l.614.613a4.787 4.787 0 0 1 2.512 1.943v.354H12a2 2 0 0 1 2 2v3h-1V5.5a1 1 0 0 0-1-1h-.293l-1.396-1.396c-.309-.309-.714-.422-1.09-.323l-.614.613a.787.787 0 0 0-1.287-.27l-3.395 3.395a1 1 0 0 0-.27 1.287l.613.614c.09.376-.023.782-.323 1.092L3 13.914a1 1 0 0 0 .707 1.707H11.5a.5.5 0 0 0 0-1h-7.793l2.853-2.853c.309-.309.422-.714.323-1.09l-.613-.614a.787.787 0 0 0-1.287-.27l-3.395 3.395a1 1 0 0 0-.27 1.287l.613.614c.09.376-.023.782-.323 1.092L.293 13.914a1 1 0 0 0 .707 1.707H11.5a.5.5 0 0 0 0-1h-7.793z"/>
+                        </svg>
+                        Music Detected
+                    `;
+                    actionsDiv.appendChild(musicIndicator);
+                }
+
+                if (rec.transcription && rec.transcription !== '') {
+                    const transcriptionEl = document.createElement('p');
+                    transcriptionEl.className = 'text-sm text-gray-600 italic border-t border-gray-100 pt-3 mt-3 max-h-24 overflow-y-auto';
+                    transcriptionEl.textContent = `"${rec.transcription}"`;
+                    card.appendChild(transcriptionEl);
+
+                    const summarizeBtn = document.createElement('button');
+                    summarizeBtn.innerHTML = `Summarize`;
+                    summarizeBtn.className = 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-3 rounded-md shadow-sm text-sm flex items-center justify-center transition-colors duration-200';
+                    summarizeBtn.onclick = () => getTranscriptionSummary(rec.transcription);
+                    actionsDiv.appendChild(summarizeBtn);
+                }
+
+                const downloadBtn = document.createElement('button');
+                downloadBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download inline-block mr-1 -mt-0.5" viewBox="0 0 16 16">
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5"/>
+                        <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708z"/>
+                    </svg>
+                    Download
+                `;
+                downloadBtn.className = 'text-blue-600 hover:text-blue-800 text-sm font-semibold py-2 px-3 rounded-md flex items-center justify-center transition-colors duration-200';
+                downloadBtn.onclick = () => {
+                    const filename = `Recording-${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+                    triggerDownload(rec.audioDataUrl, filename);
+                };
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash inline-block mr-1 -mt-0.5" viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/>
+                        <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
+                    </svg>
+                    Delete
+                `;
+                deleteBtn.className = 'text-red-500 hover:text-red-700 py-2 px-3 rounded-md flex items-center justify-center transition-colors duration-200';
+                deleteBtn.onclick = () => deleteRecordingFromSession(rec.id);
+
+                actionsDiv.appendChild(downloadBtn);
+                actionsDiv.appendChild(deleteBtn);
+
+                card.appendChild(nameEl);
+                card.appendChild(dateEl);
+                card.appendChild(audioEl);
+                card.appendChild(actionsDiv);
+
+                recordingsList.appendChild(card);
+            });
+        }
+
+        /**
+         * Determines if the app is running in a PWA standalone display mode.
+         * @returns {boolean} True if in PWA standalone mode, false otherwise.
+         */
+        function isPWADisplayMode() {
+            return window.matchMedia('(display-mode: standalone)').matches;
+        }
+
+        /**
+         * Checks if the current window aspect ratio is more typical of a mobile device.
+         * @returns {boolean} True if it's a mobile-like aspect ratio, false otherwise.
+         */
+        function isMobileAspectRatio() {
+            return (window.innerWidth / window.innerHeight) < (4 / 3);
+        }
+
+        /**
+         * Manages the visibility of the recorder and recordings panels based on screen size/PWA mode.
+         * @param {'recorder' | 'recordings'} view - The desired panel to show.
+         */
+        function managePanelVisibility(view) {
+            const useMobileUI = isMobileAspectRatio() || isPWADisplayMode();
+
+            if (!useMobileUI) {
+                recordingsPanel.classList.remove('hidden');
+                recordingsPanel.classList.add('flex');
+                recorderPanel.classList.remove('hidden');
+                recorderPanel.classList.add('flex');
+                showRecordingsButton.classList.add('hidden');
+                backToRecorderButton.classList.add('hidden');
+            } else {
+                if (view === 'recorder') {
+                    recorderPanel.classList.remove('hidden');
+                    recorderPanel.classList.add('flex');
+                    recordingsPanel.classList.add('hidden');
+                    recordingsPanel.classList.remove('flex');
+                    showRecordingsButton.classList.remove('hidden');
+                    backToRecorderButton.classList.add('hidden');
+                } else if (view === 'recordings') {
+                    recorderPanel.classList.add('hidden');
+                    recorderPanel.classList.remove('flex');
+                    recordingsPanel.classList.remove('hidden');
+                    recordingsPanel.classList.add('flex');
+                    showRecordingsButton.classList.add('hidden');
+                    backToRecorderButton.classList.remove('hidden');
+                }
+            }
+        }
+
+        /**
+         * Displays a custom confirmation modal.
+         * @param {string} message - The message to display in the confirmation.
+         * @param {Function} onConfirm - Callback function to execute if confirmed.
+         */
+        function showConfirmationModal(message, onConfirm) {
+            const modalHtml = `
+                <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+                    <div class="bg-white p-7 rounded-lg shadow-2xl max-w-sm w-full mx-auto text-center">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Confirm Action</h3>
+                        <p class="text-gray-700 mb-5">${message}</p>
+                        <div class="flex gap-4">
+                            <button id="confirmCancelBtn" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition-colors duration-200">Cancel</button>
+                            <button id="confirmProceedBtn" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200">Confirm</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            const confirmModal = document.getElementById('confirmModal');
+            const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+            const confirmProceedBtn = document.getElementById('confirmProceedBtn');
+
+            confirmCancelBtn.onclick = () => confirmModal.remove();
+            confirmProceedBtn.onclick = () => {
+                onConfirm();
+                confirmModal.remove();
+            };
+        }
+
+
+        /**
+         * Initializes the Audial application by setting up event listeners and initial UI state.
+         */
+        function initAudialApp() {
+            renderRecordingsList(sessionRecordings);
+
+            transcriptionToggle.addEventListener('change', () => {
+                isTranscriptionEnabled = transcriptionToggle.checked;
+                if (isTranscriptionEnabled && !isRecording) {
+                    transcriptionDisplay.textContent = 'Start recording to transcribe';
+                } else if (!isTranscriptionEnabled && !isRecording) {
+                    transcriptionDisplay.textContent = 'Audial';
+                }
+                if (isRecording) {
+                    if (isTranscriptionEnabled && (!speechRecognition || speechRecognition.state === 'inactive')) {
+                        startLiveTranscription();
+                    } else if (!isTranscriptionEnabled && speechRecognition && speechRecognition.state === 'recording') {
+                        speechRecognition.stop();
+                    }
+                }
+            });
+
+            isTranscriptionEnabled = transcriptionToggle.checked;
+
+            managePanelVisibility('recorder');
+
+            showRecordingsButton.addEventListener('click', () => managePanelVisibility('recordings'));
+            backToRecorderButton.addEventListener('click', () => managePanelVisibility('recorder'));
+
+            window.addEventListener('resize', () => {
+                const currentMobileView = recorderPanel.classList.contains('flex') ? 'recorder' : 'recordings';
+                managePanelVisibility(currentMobileView);
+            });
+        }
+
+        recordButton.addEventListener('click', toggleRecording);
+
+        // Initialize the app when the window loads
+        window.addEventListener('load', initAudialApp);
+    </script>
+</body>
+</html>
